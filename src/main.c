@@ -96,13 +96,13 @@ int load_move_function(const char *player, move_fn *move_player, init_fn *init_p
     }
 
     *move_player = (move_fn)dlsym(strat, "chess_move");
-    if (move_player == NULL) {
+    if (*move_player == NULL) {
         fprintf(stderr, "%s\n", dlerror());
         return -1;
     }
 
     *init_player = (init_fn)dlsym(strat, "chess_init");
-    if (init_player == NULL) {
+    if (*init_player == NULL) {
         fprintf(stderr, "%s\n", dlerror());
         return -1;
     }
