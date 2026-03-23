@@ -8,7 +8,8 @@ typedef enum {
     MSG_JOIN,      // Un client demande à rejoindre le lobby
     MSG_WELCOME,   // Le serveur accepte la connexion
     MSG_MOVE,      // Un joueur envoie un déplacement (ex: e2e4)
-    MSG_CHAT       // Un message de discussion dans un salon
+    MSG_CHAT,     // Un message de discussion dans un salon
+    MSG_MATCH_FOUND,  //NOUVEAU : Un match a été trouvé
 } type_msg_t;
 
 // Structure universelle du paquet qui voyagera en UDP et TCP

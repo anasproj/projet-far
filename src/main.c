@@ -4,6 +4,12 @@
 #include "game.h"
 #include "ds.h"
 #include <dlfcn.h>
+#include <fcntl.h>       // Pour rendre le socket non-bloquant
+#include <sys/socket.h>  // Pour le réseau
+#include <arpa/inet.h>   // Pour les adresses IP
+#include <unistd.h>
+#include "reseau.h"      // Le protocole que le Rôle 2 a créé
+
 
 #define SUBCMD_GAME "game"
 #define SUBCMD_COUNT_POSITIONS "count-positions"
@@ -111,25 +117,74 @@ int load_move_function(const char *player, move_fn *move_player, init_fn *init_p
 }
 
 int game(arguments_t args) {
-    if (load_move_function(args.player1, &move_player1, &init_player1) != 0) {
+    /*if (load_move_function(args.player1, &move_player1, &init_player1) != 0) {
         return 1;
     }
-
     if (load_move_function(args.player2, &move_player2, &init_player2) != 0) {
         return 1;
     }
 
     init_player1_fn(NULL, 0);
-    init_player2_fn(NULL, 0);
+    init_player2_fn(NULL, 0); */ 
 
     init(NULL, 0);
-    state_init(args.fen);
+    state_init(args.fen); 
 
+    // ==========================================
+    // 1. INITIALISATION DU RÉSEAU (Avant la boucle)
+    // ==========================================
+    int socket_client = socket(AF_INET, SOCK_DGRAM, 0);
+    if (socket_client < 0) {
+        perror("Erreur création socket client");
+        return 1;
+    }
+
+    // L'INSTRUCTION MAGIQUE : Rendre le socket NON-BLOQUANT
+    int flags = fcntl(socket_client, F_GETFL, 0);
+    fcntl(socket_client, F_SETFL, flags | O_NONBLOCK);
+
+    struct sockaddr_in server_addr;
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(8080);
+    server_addr.sin_addr.s_addr = inet_addr("127.0.0.1"); // L'IP de ton serveur
+
+    // Envoi du tout premier message pour se connecter (MSG_JOIN)
+    paquet_t paquet_connexion;
+    paquet_connexion.type = MSG_JOIN;
+    strcpy(paquet_connexion.pseudo, "Joueur_Raylib");
+    
+    sendto(socket_client, &paquet_connexion, sizeof(paquet_t), 0,
+           (struct sockaddr *)&server_addr, sizeof(server_addr));
+           
+    printf("Demande de connexion envoyée au serveur...\n");
+    // ==========================================
+
+    // La boucle principale du jeu Raylib
     while (!WindowShouldClose()) {
-        tick(GetFrameTime());
+        
+        // ==========================================
+        // 2. LECTURE DU RÉSEAU SANS BLOQUER (À chaque frame)
+        // ==========================================
+        paquet_t paquet_recu;
+        
+        // recvfrom va vérifier très vite s'il y a un message. 
+        // Comme on est en O_NONBLOCK, si c'est vide, ça renvoie < 0 instantanément et on passe à la suite !
+        int n = recvfrom(socket_client, &paquet_recu, sizeof(paquet_t), 0, NULL, NULL);
+
+        if (n > 0) {
+            // S'il y a plus de 0 octet, c'est qu'on a vraiment reçu un paquet de ton serveur !
+            if (paquet_recu.type == MSG_WELCOME) {
+                printf("[SERVEUR] %s\n", paquet_recu.data);
+            }
+        }
+        // ==========================================
+
+        tick(GetFrameTime()); // Fait avancer la logique du jeu Raylib (affichage, clics...)
     }
 
     CloseWindow();
+    close(socket_client); // On ferme proprement en quittant
 
     return 0;
 }
