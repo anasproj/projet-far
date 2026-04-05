@@ -107,3 +107,18 @@ int join_tournoi(int client_sock, const char *pseudo) {
     pthread_mutex_unlock(&tournoi.lock);
     return 0;
 }
+void tournoi_match_result(const char *winner_pseudo) {
+    pthread_mutex_lock(&tournoi.lock);
+
+    if (!tournoi.is_active) {
+        pthread_mutex_unlock(&tournoi.lock);
+        return;
+    }
+
+    char msg[128];
+    snprintf(msg, sizeof(msg), "[Tournoi] %s avance au tour suivant !",
+             winner_pseudo);
+    printf("%s\n", msg);
+
+    pthread_mutex_unlock(&tournoi.lock);
+}
