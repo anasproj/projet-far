@@ -1,62 +1,61 @@
-CC = clang
-CFLAGS = -Wall -Wextra -std=c11 -pg -fPIC -g
-SRC = src
-OUT = dist
+# ==============================================================================
+# Makefile — Projet Chess Tournament (FAR)
+# ==============================================================================
 
-.PHONY: all clean server
+CC       = gcc
+CFLAGS   = -Wall -Wextra -std=c11 -g -D_POSIX_C_SOURCE=200809L
+LDFLAGS  = -lm -ldl -lpthread -lX11 -lXrandr -lXinerama -lXi -lXcursor -lGL
 
-all: $(OUT)/main $(OUT)/libhuman.so $(OUT)/librandom.so $(OUT)/libminmax.so
+# Raylib
+RAYLIB_CFLAGS  = $(shell pkg-config --cflags raylib 2>/dev/null)
+RAYLIB_LDFLAGS = $(shell pkg-config --libs raylib 2>/dev/null)
 
-server: $(OUT)/server
+# Répertoires
+SRC_DIR     = src
+ENGINE_DIR  = extern/chess-engine-c/src
+BUILD_DIR   = build
+ASSETS_DIR  = $(ENGINE_DIR)/assets
 
-$(OUT):
-	mkdir -p $(OUT)
-	cp $(SRC)/assets $(OUT)/ -r
+# Sources
+SERVEUR_SRCS = src/serveur_main.c src/serveur_tournament.c src/salon_main.c src/salon_logic.c \
+               $(ENGINE_DIR)/chess.c $(ENGINE_DIR)/ds.c
 
-$(OUT)/main: $(OUT)/main.o $(OUT)/game.o $(OUT)/chess.o $(OUT)/util.o $(OUT)/ds.o | $(OUT)
-	$(CC) $(CFLAGS) -lraylib -o $@ $^
+CLIENT_SRCS = src/client_main.c src/client_network.c src/client_ui.c src/client_input.c src/client_assets.c \
+              $(ENGINE_DIR)/chess.c $(ENGINE_DIR)/ds.c
 
-$(OUT)/main.o: $(SRC)/main.c $(SRC)/game.h $(SRC)/chess.h $(SRC)/ds.h | $(OUT)
-	$(CC) $(CFLAGS) -c $< -o $@
+# Cibles
+.PHONY: all clean assets help
 
-$(OUT)/chess.o: $(SRC)/chess.c $(SRC)/chess.h | $(OUT)
-	$(CC) $(CFLAGS) -c $< -o $@
+all: assets build/serveur build/client
 
-$(OUT)/game.o: $(SRC)/game.c $(SRC)/game.h $(SRC)/chess.h $(SRC)/util.h | $(OUT)
-	$(CC) $(CFLAGS) -c $< -o $@
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
 
-$(OUT)/util.o: $(SRC)/util.c $(SRC)/util.h | $(OUT)
-	$(CC) $(CFLAGS) -c $< -o $@
+# SERVEUR
+build/serveur: $(BUILD_DIR) $(SERVEUR_SRCS)
+	$(CC) $(CFLAGS) -I$(ENGINE_DIR) -I$(SRC_DIR) -o $@ $(SERVEUR_SRCS) $(LDFLAGS)
 
-$(OUT)/ds.o: $(SRC)/ds.c $(SRC)/ds.h | $(OUT)
-	$(CC) $(CFLAGS) -c $< -o $@
+# CLIENT
+build/client: $(BUILD_DIR) $(CLIENT_SRCS)
+	$(CC) $(CFLAGS) $(RAYLIB_CFLAGS) -I$(ENGINE_DIR) -I$(SRC_DIR) -o $@ $(CLIENT_SRCS) $(RAYLIB_LDFLAGS) $(LDFLAGS)
 
-$(OUT)/human.o: $(SRC)/human.c $(SRC)/chess.h $(SRC)/util.h | $(OUT)
-	$(CC) $(CFLAGS) -c $< -o $@
+# ASSETS
+assets: $(BUILD_DIR)
+	@if [ -d "$(ASSETS_DIR)" ]; then \
+		cp -r $(ASSETS_DIR) $(BUILD_DIR)/assets; \
+		echo "Assets copiés dans $(BUILD_DIR)/assets"; \
+	fi
 
-$(OUT)/random.o: $(SRC)/random.c $(SRC)/chess.h $(SRC)/util.h | $(OUT)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(OUT)/minmax.o: $(SRC)/minmax.c $(SRC)/chess.h $(SRC)/util.h | $(OUT)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(OUT)/libhuman.so: $(OUT)/human.o $(OUT)/chess.o $(OUT)/util.o $(OUT)/ds.o | $(OUT)
-	$(CC) -lraylib -shared -fPIC $^ -o $@
-
-$(OUT)/librandom.so: $(OUT)/random.o $(OUT)/chess.o $(OUT)/util.o $(OUT)/ds.o | $(OUT)
-	$(CC) -shared -fPIC $^ -o $@
-
-$(OUT)/libminmax.so: $(OUT)/minmax.o $(OUT)/chess.o $(OUT)/util.o $(OUT)/ds.o | $(OUT)
-	$(CC) -shared -fPIC $^ -o $@
-
-$(OUT)/serveur.o: $(SRC)/serveur.c $(SRC)/reseau.h | $(OUT)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(OUT)/tournoi.o: $(SRC)/tournoi.c $(SRC)/tournoi.h | $(OUT)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(OUT)/server: $(OUT)/serveur.o $(OUT)/tournoi.o | $(OUT)
-	$(CC) $(CFLAGS) -pthread -o $@ $^
-
+# NETTOYAGE
 clean:
-	rm -rf $(OUT)
+	rm -rf $(BUILD_DIR)
+
+# AIDE
+help:
+	@echo "Utilisation :"
+	@echo "  make all       — Compile le serveur et le client"
+	@echo "  make clean     — Supprime les fichiers compilés"
+	@echo ""
+	@echo "Exécution :"
+	@echo "  ./build/serveur              — Lance le serveur"
+	@echo "  ./build/client [IP] [PSEUDO] — Lance un client"
