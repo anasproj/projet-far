@@ -25,6 +25,7 @@ static void notify_client(int client_sock, const char *payload) {
         printf("[tournoi] %s\n", payload);
     }
 }
+
 void init_tournoi(void) {
     tournoi.is_active = 0;
     tournoi.status = TOURNOI_INSCRIPTIONS;
@@ -62,6 +63,8 @@ int create_tournoi(int max_players) {
     snprintf(msg, sizeof(msg), "Tournoi cree pour %d joueurs.", max_players);
     notify_client(-1, msg);
     return 0;
+}
+
 int join_tournoi(int client_sock, const char *pseudo) {
     pthread_mutex_lock(&tournoi.lock);
 
@@ -107,6 +110,7 @@ int join_tournoi(int client_sock, const char *pseudo) {
     pthread_mutex_unlock(&tournoi.lock);
     return 0;
 }
+
 void tournoi_match_result(const char *winner_pseudo) {
     pthread_mutex_lock(&tournoi.lock);
 
