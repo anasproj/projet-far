@@ -2,7 +2,7 @@
 
 Un moteur d'échecs et une application de jeu en ligne pour jouer aux échecs contre des IA ou d'autres joueurs en réseau.
 
-## 📋 Table des matières
+## Table des matières
 
 - [Installation](#installation)
 - [Lancer le jeu](#lancer-le-jeu)
@@ -10,7 +10,7 @@ Un moteur d'échecs et une application de jeu en ligne pour jouer aux échecs co
 - [Module Tournoi](#module-tournoi)
 - [Crédits](#crédits)
 
-## 🚀 Installation
+## Installation
 
 ### Préalables
 
@@ -33,7 +33,7 @@ Pour compiler le serveur avec le support du tournoi :
 make server
 ```
 
-## 🎮 Lancer le jeu
+## Lancer le jeu
 
 ### Jeu local
 
@@ -53,7 +53,7 @@ Lance le serveur UDP/TCP pour gérer les inscriptions aux tournois et les matchs
 
 Le serveur écoute sur le port **8080** et crée des salons de jeu en TCP dynamiquement.
 
-## 🏗 Architecture
+## Architecture
 
 Le projet est organisé en plusieurs modules :
 
@@ -84,7 +84,7 @@ Les IA sont compilées en tant que bibliothèques partagées (`.so`) pour une in
 - **`index.ts`** — (optionnel) Interface TypeScript/Web
 - **`raylib.ts`** — Intégration Raylib
 
-## 🏆 Module Tournoi
+## Module Tournoi
 
 Le module tournoi implémente un système d'inscriptions et de matchmaking pour des tournois en ligne.
 
@@ -114,14 +114,14 @@ const char *tournoi_last_error(void);                // Récupère le dernier er
 5. **Matchmaking** : Le module dédié `salon` coordonne les paires
 6. **Résultats** : `tournoi_match_result("Alice")` enregistre les gagnants
 
-## 📦 Dépendances de compilation
+## Dépendances de compilation
 
 | Cible | Dépendances |
 |-------|------------|
 | `make` | `raylib`, compilateur C standard |
 | `make server` | `pthread` |
 
-## 🔨 Commandes Makefile
+## Commandes Makefile
 
 ```bash
 make              # Compile le jeu et les IA
