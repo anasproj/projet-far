@@ -3,9 +3,11 @@ CFLAGS = -Wall -Wextra -std=c11 -pg -fPIC -g
 SRC = src
 OUT = dist
 
-.PHONY: all clean
+.PHONY: all clean server
 
 all: $(OUT)/main $(OUT)/libhuman.so $(OUT)/librandom.so $(OUT)/libminmax.so
+
+server: $(OUT)/server
 
 $(OUT):
 	mkdir -p $(OUT)
@@ -46,6 +48,15 @@ $(OUT)/librandom.so: $(OUT)/random.o $(OUT)/chess.o $(OUT)/util.o $(OUT)/ds.o | 
 
 $(OUT)/libminmax.so: $(OUT)/minmax.o $(OUT)/chess.o $(OUT)/util.o $(OUT)/ds.o | $(OUT)
 	$(CC) -shared -fPIC $^ -o $@
+
+$(OUT)/serveur.o: $(SRC)/serveur.c $(SRC)/reseau.h | $(OUT)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(OUT)/tournoi.o: $(SRC)/tournoi.c $(SRC)/tournoi.h | $(OUT)
+	$(CC) $(CFLAGS) -c $< -o $@
+
+$(OUT)/server: $(OUT)/serveur.o $(OUT)/tournoi.o | $(OUT)
+	$(CC) $(CFLAGS) -pthread -o $@ $^
 
 clean:
 	rm -rf $(OUT)
