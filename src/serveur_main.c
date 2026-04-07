@@ -78,3 +78,84 @@ int main(void) {
                                 idx = i; break;
                             }
                         }
+                    }
+                    if (idx != -1) {
+                        lobby[idx].actif = 1;
+                        lobby[idx].en_attente = 1;
+                        lobby[idx].addr = cliaddr;
+                        strncpy(lobby[idx].pseudo, pkt.pseudo, MAX_PSEUDO - 1);
+                        
+                        paquet_t welcome;
+                        welcome.type = MSG_WELCOME;
+                        strcpy(welcome.data, "Connecté au lobby !");
+                        envoyer_paquet_udp(&welcome, &cliaddr);
+                        
+                        
+                        serveur_traiter_matchmaking();
+                    }
+                    break;
+                }
+                case MSG_TOURNAMENT_JOIN: {
+                    if (nb_tournoi < MAX_JOUEURS) {
+                        file_tournoi[nb_tournoi].addr = cliaddr;
+                        strncpy(file_tournoi[nb_tournoi].pseudo, pkt.pseudo, MAX_PSEUDO - 1);
+                        file_tournoi[nb_tournoi].actif = 1;
+                        nb_tournoi++;
+                        
+                        paquet_t welcome;
+                        welcome.type = MSG_WELCOME;
+                        sprintf(welcome.data, "Inscrit au tournoi (%d/4)", nb_tournoi);
+                        envoyer_paquet_udp(&welcome, &cliaddr);
+                        
+                        serveur_traiter_tournoi();
+                    }
+                    break;
+                }
+                case MSG_LIST_ROOMS: {
+                    paquet_t list;
+                    list.type = MSG_ROOM_LIST;
+                    list.data[0] = '\0';
+                    for (int i = 0; i < nb_salons; i++) {
+                        char chunk[128];
+                        sprintf(chunk, "%d:%s vs %s|", salons[i].id, salons[i].joueur1, salons[i].joueur2);
+                        strncat(list.data, chunk, sizeof(list.data) - strlen(list.data) - 1);
+                    }
+                    envoyer_paquet_udp(&list, &cliaddr);
+                    break;
+                }
+                case MSG_RESULT_REPORT: {
+                    
+                    printf("[SERVER] Rapport de résultat : %s\n", pkt.data);
+                    FILE *f = fopen("data/history.txt", "a");
+                    if (f) {
+                        fprintf(f, "%s\n", pkt.data);
+                        fclose(f);
+                    }
+                    break;
+                }
+                case MSG_HISTORY: {
+                    paquet_t hist;
+                    hist.type = MSG_HISTORY;
+                    hist.data[0] = '\0';
+                    FILE *f = fopen("data/history.txt", "r");
+                    if (f) {
+                        char line[128];
+                        while(fgets(line, sizeof(line), f)) {
+                            strncat(hist.data, line, sizeof(hist.data) - strlen(hist.data) - 2);
+                        }
+                        fclose(f);
+                    } else {
+                        strcpy(hist.data, "Aucun historique disponible.");
+                    }
+                    envoyer_paquet_udp(&hist, &cliaddr);
+                    break;
+                }
+                default: break;
+            }
+        }
+    }
+
+    close(udp_fd_serveur);
+    printf("[SERVEUR] Fermeture.\n");
+    return 0;
+}
