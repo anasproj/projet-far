@@ -50,3 +50,56 @@ void serveur_traiter_matchmaking(void) {
         
         paquet_t pkt;
         pkt.type = MSG_MATCH_FOUND;
+        sprintf(pkt.data, "%d", port);
+        envoyer_paquet_udp(&pkt, &lobby[p1].addr);
+        envoyer_paquet_udp(&pkt, &lobby[p2].addr);
+        
+        
+        lobby[p1].en_attente = 0;
+        lobby[p2].en_attente = 0;
+
+        serveur_ajouter_salon(port, lobby[p1].pseudo, lobby[p2].pseudo);
+
+        
+        
+        if (fork() == 0) {
+            creer_salon_tcp(port); 
+            exit(0);              
+        }
+        
+    }
+}
+
+void serveur_traiter_tournoi(void) {
+    if (nb_tournoi >= 4) {
+        printf("[TOURNOI] Lancement d'un tournoi à 4 joueurs !\n");
+        
+        for (int i = 0; i < 2; i++) {
+            int idx1 = i * 2;
+            int idx2 = i * 2 + 1;
+            
+            static int next_port = 10000;
+            int port = next_port++;
+            
+            paquet_t pkt;
+            pkt.type = MSG_MATCH_FOUND;
+            sprintf(pkt.data, "%d", port);
+            
+            envoyer_paquet_udp(&pkt, &file_tournoi[idx1].addr);
+            envoyer_paquet_udp(&pkt, &file_tournoi[idx2].addr);
+            
+            serveur_ajouter_salon(port, file_tournoi[idx1].pseudo, file_tournoi[idx2].pseudo);
+
+            if (fork() == 0) {
+                creer_salon_tcp(port);
+                exit(0);
+            }
+        }
+        
+        
+        for (int i = 4; i < nb_tournoi; i++) {
+            file_tournoi[i-4] = file_tournoi[i];
+        }
+        nb_tournoi -= 4;
+    }
+}
