@@ -118,3 +118,123 @@ void dessiner_liste_salons(void) {
         
         if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(GetMousePosition(), r)) {
             
+            tcp_fd = socket(AF_INET, SOCK_STREAM, 0);
+            struct sockaddr_in addr = serveur_addr;
+            addr.sin_port = htons(salons_disponibles[i].port);
+            if (connect(tcp_fd, (struct sockaddr *)&addr, sizeof(addr)) == 0) {
+                etat = STATE_SPECTATING;
+                
+                paquet_t pkt; pkt.type = MSG_SPECTATE; strcpy(pkt.pseudo, pseudo);
+                send(tcp_fd, &pkt, sizeof(paquet_t), 0);
+            }
+        }
+    }
+
+    Rectangle btnBack = { 50, 700, 150, 40 };
+    DrawRectangleRec(btnBack, MAROON);
+    DrawText("RETOUR", btnBack.x + 30, btnBack.y + 10, 20, WHITE);
+
+    if ((IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(GetMousePosition(), btnBack)) || IsKeyPressed(KEY_ESCAPE)) {
+        etat = STATE_CHOOSING_MODE;
+    }
+}
+
+void dessiner_echiquier(void) {
+    for (int r = 0; r < 8; r++) {
+        for (int f = 0; f < 8; f++) {
+            square_t sq = MK_SQUARE(r, f);
+            Vector2 p = case_vers_pixel(f, r);
+            Rectangle rect = { p.x, p.y, CELL_SIZE, CELL_SIZE };
+            
+            Color col = ((r + f) % 2 == 0) ? COL_DARK : COL_LIGHT;
+            
+            
+            if (piece_selectionnee && SQUARES_EQUAL(case_selectionnee, sq)) col = COL_SEL;
+            
+            DrawRectangleRec(rect, col);
+
+            
+            int piece = partie.board[r * 8 + f]; 
+            if (piece != CHESS_NONE) {
+                Texture2D tex = textures_pieces[piece];
+                if (tex.id > 0) {
+                    DrawTexturePro(tex, 
+                        (Rectangle){0, 0, tex.width, tex.height},
+                        (Rectangle){rect.x + 5, rect.y + 5, CELL_SIZE - 10, CELL_SIZE - 10},
+                        (Vector2){0, 0}, 0, WHITE);
+                } else {
+                    
+                    const char *symbole = "?";
+                    DrawText(symbole, rect.x + 25, rect.y + 20, 40, BLACK);
+                }
+            }
+        }
+    }
+
+    
+    if (piece_selectionnee) {
+        for (size_t i = 0; i < coups_possibles.count; i++) {
+            move_t m;
+            ds_dynamic_array_get(&coups_possibles, i, &m);
+            Vector2 p = case_vers_pixel(SQUARE_FILE(m.end), SQUARE_RANK(m.end));
+            DrawCircle(p.x + CELL_SIZE/2, p.y + CELL_SIZE/2, 10, (Color){0, 0, 0, 100});
+        }
+    }
+}
+
+void dessiner_barre_info(void) {
+    DrawRectangle(0, 800, SCREEN_W, INFO_BAR_H, DARKGRAY);
+    const char *txt_tour = (partie.current_player == CHESS_WHITE) ? "Tour : Blancs" : "Tour : Noirs";
+    DrawText(txt_tour, 20, 815, 20, WHITE);
+    
+    const char *mon_role = (ma_couleur == CHESS_WHITE) ? "Vous jouez les BLANCS" : 
+                           (ma_couleur == CHESS_BLACK) ? "Vous jouez les NOIRS" : "MODE SPECTATEUR";
+    DrawText(mon_role, 250, 815, 20, LIGHTGRAY);
+    
+    DrawText("Appuyez sur [C] pour le Chat", 550, 815, 18, (chat_visible ? GOLD : RAYWHITE));
+}
+
+void dessiner_chat(void) {
+    if (!chat_visible) return;
+
+    DrawRectangle(500, 400, 280, 380, (Color){40, 40, 40, 220});
+    DrawRectangleLines(500, 400, 280, 380, GOLD);
+
+    for (int i = 0; i < chat_count; i++) {
+        DrawText(chat_messages[i], 510, 410 + i * 18, 15, WHITE);
+    }
+
+    char input_display[300];
+    snprintf(input_display, sizeof(input_display), "> %s_", chat_input);
+    DrawText(input_display, 510, 750, 15, GOLD);
+}
+
+void dessiner_game_over(void) {
+    DrawRectangle(0, 0, SCREEN_W, SCREEN_H, (Color){0, 0, 0, 150});
+    DrawText("FIN DE PARTIE", 250, 350, 40, GOLD);
+    DrawText(info_msg, 200, 420, 25, WHITE);
+    
+    Rectangle btnBack = { (SCREEN_W - 250) / 2, 550, 250, 50 };
+    DrawRectangleRec(btnBack, DARKGRAY);
+    DrawText("RETOUR MENU", btnBack.x + 40, btnBack.y + 12, 25, WHITE);
+
+    if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(GetMousePosition(), btnBack)) {
+        etat = STATE_CHOOSING_MODE;
+    }
+    
+    DrawText("Appuyez sur [ENTREE] pour revenir au lobby", 180, 500, 20, LIGHTGRAY);
+}
+
+void dessiner_historique(void) {
+    ClearBackground(COL_BG);
+    DrawText("HISTORIQUE DES PARTIES", 50, 50, 30, COL_TEXT);
+    DrawText(historique_txt, 50, 120, 15, LIGHTGRAY);
+
+    Rectangle btnBack = { 50, 750, 150, 40 };
+    DrawRectangleRec(btnBack, DARKGRAY);
+    DrawText("RETOUR", btnBack.x + 30, btnBack.y + 10, 20, WHITE);
+
+    if ((IsMouseButtonPressed(MOUSE_LEFT_BUTTON) && CheckCollisionPointRec(GetMousePosition(), btnBack)) || IsKeyPressed(KEY_ESCAPE)) {
+        etat = STATE_CHOOSING_MODE;
+    }
+}
