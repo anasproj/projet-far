@@ -63,8 +63,13 @@ void reseau_traiter_udp(void) {
             } else if (reponse.type == MSG_MATCH_FOUND) {
                 
                 int port_salon = atoi(reponse.data);
-                printf("MATCH TROUVÉ sur le port %d ! Connexion TCP...\n", port_salon);
+                printf("[NETWORK] MATCH TROUVÉ ! Port: %d. Tentative de connexion TCP...\n", port_salon);
                 
+                
+                if (tcp_fd >= 0) {
+                    close(tcp_fd);
+                    tcp_fd = -1;
+                }
                 
                 
                 tcp_fd = socket(AF_INET, SOCK_STREAM, 0);
@@ -123,6 +128,10 @@ void reseau_traiter_tcp(void) {
                 snprintf(info_msg, sizeof(info_msg), "Partie lancée !");
                 
                 
+                memset(&partie, 0, sizeof(chess_state_t));
+                chat_count = 0; 
+                for(int i=0; i<20; i++) chat_messages[i][0] = '\0';
+
                 chess_init_fen(&partie, DS_STRING_SLICE(CHESS_START));
                 ds_dynamic_array_init(&coups_legaux, sizeof(move_t));
                 ds_dynamic_array_init(&coups_possibles, sizeof(move_t)); 

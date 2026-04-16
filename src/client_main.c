@@ -40,10 +40,19 @@ int main(int argc, char *argv[]) {
             case STATE_PLAYING:
             case STATE_SPECTATING:
                 reseau_traiter_tcp();
-                if (!chat_visible) gerer_clic_echiquier();
+                if (!chat_visible) {
+                    gerer_clic_echiquier();
+                    if (IsKeyPressed(KEY_BACKSPACE)) {
+                        if (tcp_fd >= 0) { close(tcp_fd); tcp_fd = -1; }
+                        etat = STATE_CHOOSING_MODE;
+                        piece_selectionnee = 0;
+                        snprintf(info_msg, sizeof(info_msg), "Retour à l'accueil...");
+                    }
+                }
                 gerer_chat_input();
                 break;
             case STATE_GAME_OVER:
+                reseau_traiter_udp();
                 if (IsKeyPressed(KEY_ENTER)) {
                     if (tcp_fd >= 0) { close(tcp_fd); tcp_fd = -1; }
                     etat = STATE_CHOOSING_MODE;

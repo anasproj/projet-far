@@ -95,7 +95,7 @@ void salon_traiter_paquet(int client_idx, paquet_t *pkt) {
                         if (clients[i].role == ROLE_BLACK) strcpy(p2, clients[i].pseudo);
                     }
                 }
-                sprintf(report.data, "%s vs %s : %s", p1, p2, winner_pseudo);
+                sprintf(report.data, "%d|%s vs %s : %s", port_salon, p1, p2, winner_pseudo);
                 
                 struct sockaddr_in serv;
                 memset(&serv, 0, sizeof(serv));

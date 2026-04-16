@@ -42,6 +42,8 @@ extern int nb_salons;
 
 extern joueur_t file_tournoi[MAX_JOUEURS];
 extern int nb_tournoi;
+extern joueur_t vainqueurs[MAX_JOUEURS];
+extern int nb_vainqueurs;
 
 
 
@@ -52,6 +54,7 @@ void serveur_traiter_matchmaking(void);
 void serveur_traiter_tournoi(void);
 void serveur_ajouter_salon(int port, const char *p1, const char *p2);
 void serveur_retirer_salon(int port);
+void serveur_traiter_vainqueurs(void);
 
 
 int trouver_joueur(const char *pseudo);

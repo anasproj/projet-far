@@ -105,11 +105,37 @@ void creer_salon_tcp(int port) {
                 paquet_t pkt;
                 int n = recv(clients[i].fd, &pkt, sizeof(paquet_t), 0);
                 if (n <= 0) {
+                    
+                    if (clients[i].role == ROLE_WHITE || clients[i].role == ROLE_BLACK) {
+                        int winner_idx = (i == 0) ? 1 : 0;
+                        if (clients[winner_idx].actif && clients[winner_idx].role != ROLE_SPECTATOR) {
+                            printf("[SALON %d] Victoire par forfait de %s\n", port, clients[winner_idx].pseudo);
+                            
+                            paquet_t report;
+                            report.type = MSG_RESULT_REPORT;
+                            sprintf(report.data, "%d|%s vs %s : %s", port, 
+                                    (i == 0) ? clients[i].pseudo : clients[winner_idx].pseudo,
+                                    (i == 0) ? clients[winner_idx].pseudo : clients[i].pseudo,
+                                    clients[winner_idx].pseudo);
+                            
+                            struct sockaddr_in serv;
+                            memset(&serv, 0, sizeof(serv));
+                            serv.sin_family = AF_INET;
+                            serv.sin_addr.s_addr = inet_addr("127.0.0.1");
+                            serv.sin_port = htons(PORT_SERVEUR);
+                            int tmp_fd = socket(AF_INET, SOCK_DGRAM, 0);
+                            if (tmp_fd >= 0) {
+                                sendto(tmp_fd, &report, sizeof(paquet_t), 0, (struct sockaddr *)&serv, sizeof(serv));
+                                close(tmp_fd);
+                            }
+                        }
+                    }
+
                     printf("[SALON %d] Client déconnecté (slot %d)\n", port, i);
                     close(clients[i].fd);
                     clients[i].actif = 0;
                     nb_clients--;
-                    
+
                     if (nb_clients == 0) {
                         printf("[SALON %d] Fin de partie, fermeture.\n", port);
                         exit(0);

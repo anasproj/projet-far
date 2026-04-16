@@ -1,5 +1,6 @@
 #include "chess.h"
 #include "ds.h"
+#include <string.h>
 
 extern DS_ALLOCATOR allocator;
 
@@ -337,6 +338,7 @@ unsigned long chess_move_size(void) {
 }
 
 void chess_init_fen(chess_state_t *state, ds_string_slice fen) {
+    memset(state, 0, sizeof(chess_state_t));
     unsigned int rank = 0;
     unsigned int file = 0;
 

@@ -38,6 +38,12 @@ int main(void) {
         exit(EXIT_FAILURE);
     }
 
+    int opt = 1;
+    setsockopt(udp_fd_serveur, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+#ifdef SO_REUSEPORT
+    setsockopt(udp_fd_serveur, SOL_SOCKET, SO_REUSEPORT, &opt, sizeof(opt));
+#endif
+
     memset(&servaddr, 0, sizeof(servaddr));
     servaddr.sin_family = AF_INET;
     servaddr.sin_addr.s_addr = INADDR_ANY;
@@ -68,6 +74,17 @@ int main(void) {
 
             printf("[LOBBY] Packet type %d de %s (%s:%d)\n", 
                    pkt.type, pkt.pseudo, inet_ntoa(cliaddr.sin_addr), ntohs(cliaddr.sin_port));
+
+            switch (pkt.type) {
+                case MSG_JOIN: 
+                case MSG_TOURNAMENT_JOIN:
+                case MSG_LIST_ROOMS:
+                case MSG_HISTORY: {
+                    int idx = trouver_joueur(pkt.pseudo);
+                    if (idx != -1) lobby[idx].addr = cliaddr;
+                }
+                default: break;
+            }
 
             switch (pkt.type) {
                 case MSG_JOIN: {
@@ -126,6 +143,32 @@ int main(void) {
                 case MSG_RESULT_REPORT: {
                     
                     printf("[SERVER] Rapport de résultat : %s\n", pkt.data);
+                    
+                    int port_r;
+                    char p1_r[32], p2_r[32], winner_r[32];
+                    if (sscanf(pkt.data, "%d|%s vs %s : %s", &port_r, p1_r, p2_r, winner_r) == 4) {
+                        
+                        serveur_retirer_salon(port_r);
+
+                        
+                        if (port_r >= 10000 && strcmp(winner_r, "NULLE") != 0) {
+                            int v_idx = trouver_joueur(winner_r);
+                            if (v_idx != -1 && nb_vainqueurs < MAX_JOUEURS) {
+                                vainqueurs[nb_vainqueurs] = lobby[v_idx];
+                                nb_vainqueurs++;
+                                serveur_traiter_vainqueurs();
+                            }
+                        } else if (port_r >= 10000 && strcmp(winner_r, "NULLE") == 0) {
+                            
+                            int v_idx = trouver_joueur(p1_r);
+                            if (v_idx != -1 && nb_vainqueurs < MAX_JOUEURS) {
+                                vainqueurs[nb_vainqueurs] = lobby[v_idx];
+                                nb_vainqueurs++;
+                                serveur_traiter_vainqueurs();
+                            }
+                        }
+                    }
+
                     FILE *f = fopen("data/history.txt", "a");
                     if (f) {
                         fprintf(f, "%s\n", pkt.data);

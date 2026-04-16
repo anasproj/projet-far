@@ -1,4 +1,5 @@
 #include "serveur.h"
+#include <unistd.h>
 
 
 joueur_t lobby[MAX_JOUEURS] = {0};
@@ -9,6 +10,9 @@ int nb_salons = 0;
 
 joueur_t file_tournoi[MAX_JOUEURS] = {0};
 int nb_tournoi = 0;
+
+joueur_t vainqueurs[MAX_JOUEURS] = {0};
+int nb_vainqueurs = 0;
 
 void serveur_ajouter_salon(int port, const char *p1, const char *p2) {
     if (nb_salons < MAX_SALONS) {
@@ -101,5 +105,37 @@ void serveur_traiter_tournoi(void) {
             file_tournoi[i-4] = file_tournoi[i];
         }
         nb_tournoi -= 4;
+    }
+}
+
+void serveur_traiter_vainqueurs(void) {
+    if (nb_vainqueurs >= 2) {
+        printf("[TOURNOI] Lancement de la FINALE !\n");
+        
+        static int final_port = 11000;
+        int port = final_port++;
+        
+        paquet_t pkt;
+        pkt.type = MSG_MATCH_FOUND;
+        sprintf(pkt.data, "%d", port);
+        
+        for (int r = 0; r < 5; r++) {
+            envoyer_paquet_udp(&pkt, &vainqueurs[0].addr);
+            envoyer_paquet_udp(&pkt, &vainqueurs[1].addr);
+            usleep(50000); 
+        }
+        
+        serveur_ajouter_salon(port, vainqueurs[0].pseudo, vainqueurs[1].pseudo);
+
+        if (fork() == 0) {
+            creer_salon_tcp(port);
+            exit(0);
+        }
+
+        
+        for (int i = 2; i < nb_vainqueurs; i++) {
+            vainqueurs[i-2] = vainqueurs[i];
+        }
+        nb_vainqueurs -= 2;
     }
 }
