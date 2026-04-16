@@ -119,17 +119,21 @@ void serveur_traiter_vainqueurs(void) {
         pkt.type = MSG_MATCH_FOUND;
         sprintf(pkt.data, "%d", port);
         
-        for (int r = 0; r < 5; r++) {
-            envoyer_paquet_udp(&pkt, &vainqueurs[0].addr);
-            envoyer_paquet_udp(&pkt, &vainqueurs[1].addr);
-            usleep(50000); 
-        }
-        
         serveur_ajouter_salon(port, vainqueurs[0].pseudo, vainqueurs[1].pseudo);
 
+        // Créer le salon AVANT d'envoyer les invitations
         if (fork() == 0) {
             creer_salon_tcp(port);
             exit(0);
+        }
+
+        // Attendre que le salon soit prêt avant d'inviter les clients
+        usleep(500000);  // 500ms
+
+        for (int r = 0; r < 3; r++) {
+            envoyer_paquet_udp(&pkt, &vainqueurs[0].addr);
+            envoyer_paquet_udp(&pkt, &vainqueurs[1].addr);
+            usleep(100000);  // 100ms entre chaque tentative
         }
 
         

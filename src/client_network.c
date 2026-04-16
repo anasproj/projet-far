@@ -85,6 +85,11 @@ void reseau_traiter_udp(void) {
                     join_pkt.type = MSG_JOIN;
                     strcpy(join_pkt.pseudo, pseudo);
                     send(tcp_fd, &join_pkt, sizeof(paquet_t), 0);
+                } else {
+                    // Échec de connexion, nettoyer pour réessayer
+                    printf("[NETWORK] Échec de connexion au port %d, nouvelle tentative...\n", port_salon);
+                    close(tcp_fd);
+                    tcp_fd = -1;
                 }
             } else if (reponse.type == MSG_ROOM_LIST) {
                 
