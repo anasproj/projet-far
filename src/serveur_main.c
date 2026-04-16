@@ -1,4 +1,6 @@
+#define _DEFAULT_SOURCE
 #include "serveur.h"
+#include <unistd.h>
 
 DS_ALLOCATOR allocator = {0};
 
@@ -115,10 +117,28 @@ int main(void) {
                 }
                 case MSG_TOURNAMENT_JOIN: {
                     if (nb_tournoi < MAX_JOUEURS) {
+                        // Vérifier doublon dans la file tournoi
+                        int deja_inscrit = 0;
+                        for (int i = 0; i < nb_tournoi; i++) {
+                            if (strcmp(file_tournoi[i].pseudo, pkt.pseudo) == 0) {
+                                deja_inscrit = 1;
+                                file_tournoi[i].addr = cliaddr;  // Mettre à jour l'adresse
+                                break;
+                            }
+                        }
+                        
+                        if (deja_inscrit) {
+                            printf("[TOURNOI] Doublon ignoré: %s est déjà inscrit (%d/4)\n", pkt.pseudo, nb_tournoi);
+                            paquet_t welcome;
+                            welcome.type = MSG_WELCOME;
+                            sprintf(welcome.data, "Déjà inscrit au tournoi (%d/4)", nb_tournoi);
+                            envoyer_paquet_udp(&welcome, &cliaddr);
+                            break;
+                        }
+
                         // S'assurer que le joueur est aussi dans le lobby
                         int l_idx = trouver_joueur(pkt.pseudo);
                         if (l_idx == -1) {
-                            // Pas encore dans le lobby, l'ajouter
                             for (int i = 0; i < MAX_JOUEURS; i++) {
                                 if (!lobby[i].actif) {
                                     l_idx = i;
@@ -133,13 +153,15 @@ int main(void) {
                         }
                         if (l_idx != -1) {
                             lobby[l_idx].dans_tournoi = 1;
-                            lobby[l_idx].addr = cliaddr;  // Toujours mettre à jour l'adresse
+                            lobby[l_idx].addr = cliaddr;
                         }
 
                         file_tournoi[nb_tournoi].addr = cliaddr;
                         strncpy(file_tournoi[nb_tournoi].pseudo, pkt.pseudo, MAX_PSEUDO - 1);
                         file_tournoi[nb_tournoi].actif = 1;
                         nb_tournoi++;
+                        
+                        printf("[TOURNOI] Joueur inscrit: %s (%d/4)\n", pkt.pseudo, nb_tournoi);
                         
                         paquet_t welcome;
                         welcome.type = MSG_WELCOME;
@@ -163,48 +185,54 @@ int main(void) {
                     break;
                 }
                 case MSG_RESULT_REPORT: {
-                    
                     printf("[SERVER] Rapport de résultat : %s\n", pkt.data);
-                    
+
                     int port_r;
                     char p1_r[32], p2_r[32], winner_r[32];
                     if (sscanf(pkt.data, "%d|%s vs %s : %s", &port_r, p1_r, p2_r, winner_r) == 4) {
-                        
-                        serveur_retirer_salon(port_r);
-
-                        
-                        if (port_r >= 10000 && strcmp(winner_r, "NULLE") != 0) {
-                            int v_idx = trouver_joueur(winner_r);
-                            printf("[TOURNOI] Recherche vainqueur '%s' dans lobby: idx=%d, nb_vainqueurs=%d\n", winner_r, v_idx, nb_vainqueurs);
-                            if (v_idx != -1 && nb_vainqueurs < MAX_JOUEURS) {
-                                vainqueurs[nb_vainqueurs] = lobby[v_idx];
-                                nb_vainqueurs++;
-                                printf("[TOURNOI] Vainqueur ajouté: %s (nb_vainqueurs=%d)\n", winner_r, nb_vainqueurs);
-                                serveur_traiter_vainqueurs();
+                        // Guard : traiter ce rapport SEULEMENT si le salon existait
+                        // (protection contre doublons mat+forfait)
+                        if (serveur_retirer_salon(port_r)) {
+                            // Enregistrer dans l'historique (une seule fois par match)
+                            FILE *fh = fopen("data/history.txt", "a");
+                            if (fh) {
+                                fprintf(fh, "%s\n", pkt.data);
+                                fclose(fh);
                             }
-                        } else if (port_r >= 10000 && strcmp(winner_r, "NULLE") == 0) {
-                            
-                            int v_idx = trouver_joueur(p1_r);
-                            if (v_idx != -1 && nb_vainqueurs < MAX_JOUEURS) {
-                                vainqueurs[nb_vainqueurs] = lobby[v_idx];
-                                nb_vainqueurs++;
-                                serveur_traiter_vainqueurs();
+
+                            // Traitement tournoi : accumuler les vainqueurs
+                            if (port_r >= 10000 && strcmp(winner_r, "NULLE") != 0) {
+                                int v_idx = trouver_joueur(winner_r);
+                                printf("[TOURNOI] Recherche vainqueur '%s': idx=%d, nb_vainqueurs=%d\n",
+                                       winner_r, v_idx, nb_vainqueurs);
+                                if (v_idx != -1 && nb_vainqueurs < MAX_JOUEURS) {
+                                    vainqueurs[nb_vainqueurs] = lobby[v_idx];
+                                    nb_vainqueurs++;
+                                    printf("[TOURNOI] Vainqueur ajouté: %s (total=%d)\n", winner_r, nb_vainqueurs);
+                                    serveur_traiter_vainqueurs();
+                                }
+                            } else if (port_r >= 10000 && strcmp(winner_r, "NULLE") == 0) {
+                                // Match nul : p1 passe en finale par convention
+                                int v_idx = trouver_joueur(p1_r);
+                                if (v_idx != -1 && nb_vainqueurs < MAX_JOUEURS) {
+                                    vainqueurs[nb_vainqueurs] = lobby[v_idx];
+                                    nb_vainqueurs++;
+                                    serveur_traiter_vainqueurs();
+                                }
                             }
-                        }
 
-                        
-                        if (port_r >= 10000) {
-                            int l_p1 = trouver_joueur(p1_r);
-                            int l_p2 = trouver_joueur(p2_r);
-                            if (l_p1 != -1 && strcmp(p1_r, winner_r) != 0 && strcmp(winner_r, "NULLE") != 0) lobby[l_p1].dans_tournoi = 0;
-                            if (l_p2 != -1 && strcmp(p2_r, winner_r) != 0 && strcmp(winner_r, "NULLE") != 0) lobby[l_p2].dans_tournoi = 0;
+                            // Libérer les perdants du flag tournoi
+                            if (port_r >= 10000) {
+                                int l_p1 = trouver_joueur(p1_r);
+                                int l_p2 = trouver_joueur(p2_r);
+                                if (l_p1 != -1 && strcmp(p1_r, winner_r) != 0 && strcmp(winner_r, "NULLE") != 0)
+                                    lobby[l_p1].dans_tournoi = 0;
+                                if (l_p2 != -1 && strcmp(p2_r, winner_r) != 0 && strcmp(winner_r, "NULLE") != 0)
+                                    lobby[l_p2].dans_tournoi = 0;
+                            }
+                        } else {
+                            printf("[SERVER] Rapport dupliqué ignoré pour le port %d\n", port_r);
                         }
-                    }
-
-                    FILE *f = fopen("data/history.txt", "a");
-                    if (f) {
-                        fprintf(f, "%s\n", pkt.data);
-                        fclose(f);
                     }
                     break;
                 }

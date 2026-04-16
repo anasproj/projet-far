@@ -1,3 +1,4 @@
+#define _DEFAULT_SOURCE
 #include "serveur.h"
 #include <unistd.h>
 
@@ -24,14 +25,15 @@ void serveur_ajouter_salon(int port, const char *p1, const char *p2) {
     }
 }
 
-void serveur_retirer_salon(int port) {
+int serveur_retirer_salon(int port) {
     for (int i = 0; i < nb_salons; i++) {
         if (salons[i].id == port) {
             salons[i] = salons[nb_salons - 1];
             nb_salons--;
-            break;
+            return 1;
         }
     }
+    return 0;
 }
 
 void serveur_traiter_matchmaking(void) {

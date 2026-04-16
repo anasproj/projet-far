@@ -54,7 +54,7 @@ extern int nb_vainqueurs;
 void serveur_traiter_matchmaking(void);
 void serveur_traiter_tournoi(void);
 void serveur_ajouter_salon(int port, const char *p1, const char *p2);
-void serveur_retirer_salon(int port);
+int serveur_retirer_salon(int port);
 void serveur_traiter_vainqueurs(void);
 
 
