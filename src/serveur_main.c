@@ -99,6 +99,7 @@ int main(void) {
                     if (idx != -1) {
                         lobby[idx].actif = 1;
                         lobby[idx].en_attente = 1;
+                        lobby[idx].dans_tournoi = 0; // Réinitialisation si retour au lobby "frais"
                         lobby[idx].addr = cliaddr;
                         strncpy(lobby[idx].pseudo, pkt.pseudo, MAX_PSEUDO - 1);
                         
@@ -114,6 +115,9 @@ int main(void) {
                 }
                 case MSG_TOURNAMENT_JOIN: {
                     if (nb_tournoi < MAX_JOUEURS) {
+                        int l_idx = trouver_joueur(pkt.pseudo);
+                        if (l_idx != -1) lobby[l_idx].dans_tournoi = 1;
+
                         file_tournoi[nb_tournoi].addr = cliaddr;
                         strncpy(file_tournoi[nb_tournoi].pseudo, pkt.pseudo, MAX_PSEUDO - 1);
                         file_tournoi[nb_tournoi].actif = 1;
@@ -166,6 +170,14 @@ int main(void) {
                                 nb_vainqueurs++;
                                 serveur_traiter_vainqueurs();
                             }
+                        }
+
+                        
+                        if (port_r >= 10000) {
+                            int l_p1 = trouver_joueur(p1_r);
+                            int l_p2 = trouver_joueur(p2_r);
+                            if (l_p1 != -1 && strcmp(p1_r, winner_r) != 0 && strcmp(winner_r, "NULLE") != 0) lobby[l_p1].dans_tournoi = 0;
+                            if (l_p2 != -1 && strcmp(p2_r, winner_r) != 0 && strcmp(winner_r, "NULLE") != 0) lobby[l_p2].dans_tournoi = 0;
                         }
                     }
 

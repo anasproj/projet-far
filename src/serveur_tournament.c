@@ -38,7 +38,7 @@ void serveur_traiter_matchmaking(void) {
     
     int p1 = -1, p2 = -1;
     for (int i = 0; i < MAX_JOUEURS; i++) {
-        if (lobby[i].actif && lobby[i].en_attente) {
+        if (lobby[i].actif && lobby[i].en_attente && !lobby[i].dans_tournoi) {
             if (p1 == -1) p1 = i;
             else { p2 = i; break; }
         }
@@ -130,6 +130,12 @@ void serveur_traiter_vainqueurs(void) {
         if (fork() == 0) {
             creer_salon_tcp(port);
             exit(0);
+        }
+
+        
+        for (int i = 0; i < 2; i++) {
+            int l_idx = trouver_joueur(vainqueurs[i].pseudo);
+            if (l_idx != -1) lobby[l_idx].dans_tournoi = 0; 
         }
 
         

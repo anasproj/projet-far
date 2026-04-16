@@ -26,6 +26,7 @@ typedef struct {
     struct sockaddr_in addr;
     int actif;
     int en_attente;
+    int dans_tournoi;
 } joueur_t;
 
 
