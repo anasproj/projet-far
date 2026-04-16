@@ -61,6 +61,10 @@ void reseau_traiter_udp(void) {
             if (reponse.type == MSG_WELCOME) {
                 snprintf(info_msg, sizeof(info_msg), "%s", reponse.data);
             } else if (reponse.type == MSG_MATCH_FOUND) {
+                // Ignorer si on est déjà connecté à un salon
+                if (etat == STATE_CONNECTING || etat == STATE_PLAYING || etat == STATE_SPECTATING) {
+                    return;
+                }
                 
                 int port_salon = atoi(reponse.data);
                 printf("[NETWORK] MATCH TROUVÉ ! Port: %d. Tentative de connexion TCP...\n", port_salon);
