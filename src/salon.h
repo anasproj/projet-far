@@ -47,6 +47,7 @@ extern client_t clients[MAX_PLAYERS];
 extern int nb_clients;
 extern chess_state_t partie_salon;
 extern int port_salon;
+extern int result_reported;  // 1 si un résultat a déjà été envoyé au lobby
 
 
 

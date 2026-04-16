@@ -108,7 +108,8 @@ void creer_salon_tcp(int port) {
                     
                     if (clients[i].role == ROLE_WHITE || clients[i].role == ROLE_BLACK) {
                         int winner_idx = (i == 0) ? 1 : 0;
-                        if (clients[winner_idx].actif && clients[winner_idx].role != ROLE_SPECTATOR) {
+                        if (!result_reported && clients[winner_idx].actif && clients[winner_idx].role != ROLE_SPECTATOR) {
+                            result_reported = 1;
                             printf("[SALON %d] Victoire par forfait de %s\n", port, clients[winner_idx].pseudo);
                             
                             paquet_t report;

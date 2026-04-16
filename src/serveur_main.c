@@ -115,8 +115,26 @@ int main(void) {
                 }
                 case MSG_TOURNAMENT_JOIN: {
                     if (nb_tournoi < MAX_JOUEURS) {
+                        // S'assurer que le joueur est aussi dans le lobby
                         int l_idx = trouver_joueur(pkt.pseudo);
-                        if (l_idx != -1) lobby[l_idx].dans_tournoi = 1;
+                        if (l_idx == -1) {
+                            // Pas encore dans le lobby, l'ajouter
+                            for (int i = 0; i < MAX_JOUEURS; i++) {
+                                if (!lobby[i].actif) {
+                                    l_idx = i;
+                                    break;
+                                }
+                            }
+                            if (l_idx != -1) {
+                                lobby[l_idx].actif = 1;
+                                lobby[l_idx].en_attente = 0;
+                                strncpy(lobby[l_idx].pseudo, pkt.pseudo, MAX_PSEUDO - 1);
+                            }
+                        }
+                        if (l_idx != -1) {
+                            lobby[l_idx].dans_tournoi = 1;
+                            lobby[l_idx].addr = cliaddr;  // Toujours mettre à jour l'adresse
+                        }
 
                         file_tournoi[nb_tournoi].addr = cliaddr;
                         strncpy(file_tournoi[nb_tournoi].pseudo, pkt.pseudo, MAX_PSEUDO - 1);
@@ -157,9 +175,11 @@ int main(void) {
                         
                         if (port_r >= 10000 && strcmp(winner_r, "NULLE") != 0) {
                             int v_idx = trouver_joueur(winner_r);
+                            printf("[TOURNOI] Recherche vainqueur '%s' dans lobby: idx=%d, nb_vainqueurs=%d\n", winner_r, v_idx, nb_vainqueurs);
                             if (v_idx != -1 && nb_vainqueurs < MAX_JOUEURS) {
                                 vainqueurs[nb_vainqueurs] = lobby[v_idx];
                                 nb_vainqueurs++;
+                                printf("[TOURNOI] Vainqueur ajouté: %s (nb_vainqueurs=%d)\n", winner_r, nb_vainqueurs);
                                 serveur_traiter_vainqueurs();
                             }
                         } else if (port_r >= 10000 && strcmp(winner_r, "NULLE") == 0) {
