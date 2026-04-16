@@ -17,6 +17,7 @@
 
 #define MAX_PSEUDO 32
 #define MAX_PLAYERS 10
+#define PORT_SERVEUR 8080
 
 #ifndef SO_REUSEPORT
 #define SO_REUSEPORT SO_REUSEADDR
@@ -46,6 +47,7 @@ extern client_t clients[MAX_PLAYERS];
 extern int nb_clients;
 extern chess_state_t partie_salon;
 extern int port_salon;
+extern int result_reported;  // 1 si un résultat a déjà été envoyé au lobby
 
 
 

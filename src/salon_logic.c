@@ -9,6 +9,7 @@ client_t clients[MAX_PLAYERS] = {0};
 int nb_clients = 0;
 chess_state_t partie_salon;
 int port_salon = 0;
+int result_reported = 0;  // Protection contre les doubles rapports
 
 void salon_init_jeu(void) {
     chess_init_fen(&partie_salon, DS_STRING_SLICE(CHESS_START));
@@ -78,7 +79,8 @@ void salon_traiter_paquet(int client_idx, paquet_t *pkt) {
                 printf("[SALON %d] MATCH NUL (Pat ou matériel insuffisant)\n", port_salon);
             }
 
-            if (over) {
+            if (over && !result_reported) {
+                result_reported = 1;  // Marquer comme déjà rapporté
                 paquet_t over_pkt;
                 over_pkt.type = MSG_GAME_OVER;
                 strcpy(over_pkt.pseudo, "SERVEUR");
@@ -95,7 +97,7 @@ void salon_traiter_paquet(int client_idx, paquet_t *pkt) {
                         if (clients[i].role == ROLE_BLACK) strcpy(p2, clients[i].pseudo);
                     }
                 }
-                sprintf(report.data, "%s vs %s : %s", p1, p2, winner_pseudo);
+                sprintf(report.data, "%d|%s vs %s : %s", port_salon, p1, p2, winner_pseudo);
                 
                 struct sockaddr_in serv;
                 memset(&serv, 0, sizeof(serv));

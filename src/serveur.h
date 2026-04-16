@@ -26,6 +26,7 @@ typedef struct {
     struct sockaddr_in addr;
     int actif;
     int en_attente;
+    int dans_tournoi;
 } joueur_t;
 
 
@@ -42,6 +43,8 @@ extern int nb_salons;
 
 extern joueur_t file_tournoi[MAX_JOUEURS];
 extern int nb_tournoi;
+extern joueur_t vainqueurs[MAX_JOUEURS];
+extern int nb_vainqueurs;
 
 
 
@@ -51,7 +54,8 @@ extern int nb_tournoi;
 void serveur_traiter_matchmaking(void);
 void serveur_traiter_tournoi(void);
 void serveur_ajouter_salon(int port, const char *p1, const char *p2);
-void serveur_retirer_salon(int port);
+int serveur_retirer_salon(int port);
+void serveur_traiter_vainqueurs(void);
 
 
 int trouver_joueur(const char *pseudo);
